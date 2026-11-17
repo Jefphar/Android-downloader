@@ -1,25 +1,26 @@
-# Fast Downloader (IDM-style, Android)
+# FastDownloader
 
-Segmented, multi-connection download manager written in Kotlin + Jetpack Compose.
+Android download manager with IDM-style acceleration.
 
-## Features
-- Splits each file into up to 16 byte-range segments, downloaded in parallel (IDM-style acceleration)
-- Per-connection segment progress bar, live speed and ETA
-- Pause / resume (survives app restarts, resumes each segment exactly where it stopped)
-- Download queue (3 files at once), auto retry with backoff
-- Foreground service + notifications, so downloads continue in the background
-- Add by URL (auto-fills from clipboard), by **Share → Fast Downloader** from any browser/app,
-  or "Open with" on direct file links (.zip, .apk, .mp4, .pdf, ...)
-- Finished files are saved to `Downloads/FastDownloader` via MediaStore (no storage permission needed)
-- Falls back to a single connection when the server does not support ranges
+## How it's fast
+- The file is split into up to 32 byte ranges; **8 parallel connections** pull ranges from a shared queue, so fast connections automatically take on more work.
+- Resumes after pause, network loss or app kill (per-range progress is saved).
+- Falls back to a single stream when the server doesn't support `Range`.
+- Up to 3 files download at once; extra ones wait in the queue.
+- Foreground service + wake lock keep downloads running with the screen off.
 
-## Build
-1. Open the `FastDownloader` folder in Android Studio (Ladybug or newer, JDK 17).
-2. Let Gradle sync (it will download Gradle 8.9 and dependencies), then Run on a device (Android 10+).
+## Using it
+- Tap **New download** and paste a link, or
+- copy a link (a "Download copied link?" prompt appears when you return to the app), or
+- use **Share → FastDownloader** from your browser.
+Finished files are saved in `Downloads/FastDownloader`.
 
-Or from a terminal with Gradle installed: `gradle wrapper && ./gradlew assembleDebug`.
+## Build the APK
+Push this folder to the **root** of a GitHub repo. The **Build APK** workflow runs on push (or run it manually
+from the Actions tab) and publishes the artifact **FastDownloader-apk**.
 
-## Notes
-- Android has no browser-extension hook like desktop IDM; the Share sheet and "Open with" are the capture routes.
-- Foreground services of type dataSync are time-limited by Android 15 (about 6 h per day); fine for normal use.
-- Only download content you have the right to download.
+To build locally: `gradle assembleDebug` (Gradle 8.9, JDK 17, Android SDK 34).
+
+## Tuning
+`DownloadTask.MAX_THREADS` (default 8) and `Downloads.MAX_ACTIVE` (default 3). Some servers throttle or
+block many connections per IP, so more threads isn't always faster.
